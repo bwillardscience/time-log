@@ -64,9 +64,26 @@
     text-transform: uppercase; margin: 0 0 14px; color: var(--steel-dark);
     display:flex; align-items:center; gap:8px;
   }
-  .panel h2::before{
+  .panel h2:not(.collapsible)::before{
     content:""; width:8px; height:8px; background: var(--amber); display:inline-block;
   }
+  .panel h2.collapsible{
+    cursor:pointer; user-select:none; justify-content:space-between; margin-bottom:0;
+    padding-bottom: 14px;
+  }
+  .panel h2.collapsible .htext{ display:flex; align-items:center; gap:8px; }
+  .panel h2.collapsible .htext::before{
+    content:""; width:8px; height:8px; background: var(--amber); display:inline-block;
+  }
+  .chevron{
+    font-size:12px; color: var(--ink-soft); transition: transform .18s ease;
+  }
+  .chevron.open{ transform: rotate(180deg); }
+  .panel-body{
+    overflow:hidden; max-height: 2000px; transition: max-height .22s ease, opacity .18s ease, margin-top .18s ease;
+    margin-top: 14px; opacity: 1;
+  }
+  .panel-body.collapsed{ max-height:0; opacity:0; margin-top:0; }
 
   /* Clock section */
   .clock-row{ display:flex; gap:14px; align-items:center; flex-wrap:wrap; }
@@ -199,26 +216,30 @@
   </div>
 
   <div class="panel">
-    <h2>Google Sheet Sync</h2>
-    <div class="grid-row">
-      <div class="full">
-        <label>Apps Script Web App URL</label>
-        <input type="text" id="sheetUrl" placeholder="https://script.google.com/macros/s/XXXX/exec">
+    <h2 class="collapsible" id="sheetSyncToggle"><span class="htext">Google Sheet Sync</span><span class="chevron" id="sheetSyncChevron">▾</span></h2>
+    <div class="panel-body collapsed" id="sheetSyncBody">
+      <div class="grid-row">
+        <div class="full">
+          <label>Apps Script Web App URL</label>
+          <input type="text" id="sheetUrl" placeholder="https://script.google.com/macros/s/XXXX/exec">
+        </div>
       </div>
+      <div class="footer-actions">
+        <button class="small-btn" id="saveSheetUrlBtn">Save</button>
+        <button class="small-btn" id="testSheetBtn">Send Test Row</button>
+        <button class="small-btn amber" id="syncAllBtn">Sync All Entries Now</button>
+      </div>
+      <div id="sheetStatus" style="font-size:11px; color:var(--ink-soft); margin-top:8px;"></div>
     </div>
-    <div class="footer-actions">
-      <button class="small-btn" id="saveSheetUrlBtn">Save</button>
-      <button class="small-btn" id="testSheetBtn">Send Test Row</button>
-      <button class="small-btn amber" id="syncAllBtn">Sync All Entries Now</button>
-    </div>
-    <div id="sheetStatus" style="font-size:11px; color:var(--ink-soft); margin-top:8px;"></div>
   </div>
 
   <div class="panel">
-    <h2>Log</h2>
-    <div id="periodsContainer"></div>
-    <div class="footer-actions">
-      <button class="small-btn" id="copyBtn">Copy Current Period for Timesheet</button>
+    <h2 class="collapsible" id="logToggle"><span class="htext">Log</span><span class="chevron open" id="logChevron">▾</span></h2>
+    <div class="panel-body" id="logBody">
+      <div id="periodsContainer"></div>
+      <div class="footer-actions">
+        <button class="small-btn" id="copyBtn">Copy Current Period for Timesheet</button>
+      </div>
     </div>
   </div>
 </div>
@@ -251,7 +272,7 @@ async function pushEntryToSheet(entry){
   try{
     await fetch(sheetWebAppUrl, {
       method: 'POST',
-      mode: 'no-cors', // Apps Script responses don't carry CORS headers reliably; no-cors lets the POST land even though we can't read the response back.
+      mode: 'no-cors',
       headers: { 'Content-Type': 'text/plain;charset=utf-8' },
       body: JSON.stringify(entry)
     });
@@ -398,7 +419,15 @@ function escapeHtml(str){
   return d.innerHTML;
 }
 
-// Clock In
+// Collapsible panels
+function wireToggle(headerId, bodyId, chevronId){
+  $(headerId).addEventListener('click', ()=>{
+    $(bodyId).classList.toggle('collapsed');
+    $(chevronId).classList.toggle('open');
+  });
+}
+wireToggle('sheetSyncToggle','sheetSyncBody','sheetSyncChevron');
+wireToggle('logToggle','logBody','logChevron');
 $('clockInBtn').addEventListener('click', async ()=>{
   activeSession = { start: new Date().toISOString() };
   await saveActiveSession();
