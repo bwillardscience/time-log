@@ -221,7 +221,7 @@
       <div class="grid-row">
         <div class="full">
           <label>Apps Script Web App URL</label>
-          <input type="text" id="sheetUrl" value="https://script.google.com/macros/s/AKfycbwWryi-hVZn2ky1HYpEPMdJk_s0uuUoDC28CNCuQWbS7zmsRO8gD04tFQ-bWiCVUQhGFA/exec">
+          <input type="text" id="sheetUrl" placeholder="https://script.google.com/macros/s/XXXX/exec">
         </div>
       </div>
       <div class="footer-actions">
@@ -250,6 +250,10 @@
 const STORE_KEY = 'materials_time_entries';
 const ACTIVE_KEY = 'materials_active_session';
 const SHEET_URL_KEY = 'materials_sheet_webapp_url';
+// Baked-in default — always used unless overridden by the Settings field or a ?sheet= URL param.
+// This means clock in/out works correctly even in an isolated automation browser session
+// with no access to saved localStorage.
+const DEFAULT_SHEET_URL = 'https://script.google.com/macros/s/AKfycbyfZXLmmXXf0oLZQjPD0dITseFs8hTa9Z10SEmcWjMoMzMGn5MNaEDHqEBAb9xuVIWLwA/exec';
 let entries = [];
 let activeSession = null;
 let timerInterval = null;
@@ -262,9 +266,9 @@ function sheetStatus(msg){
 
 async function loadSheetUrl(){
   try{
-    sheetWebAppUrl = localStorage.getItem(SHEET_URL_KEY) || '';
+    sheetWebAppUrl = localStorage.getItem(SHEET_URL_KEY) || DEFAULT_SHEET_URL;
     $('sheetUrl').value = sheetWebAppUrl;
-  }catch(e){ sheetWebAppUrl = ''; }
+  }catch(e){ sheetWebAppUrl = DEFAULT_SHEET_URL; }
 }
 
 async function pushEntryToSheet(entry){
@@ -543,8 +547,20 @@ $('copyBtn').addEventListener('click', ()=>{
 });
 
 // Handle NFC-triggered auto actions via URL: ?action=in or ?action=out
+// Also accepts ?sheet=<encoded Apps Script URL> so the sync target survives
+// even in an isolated automation-triggered browser session with no shared storage.
 async function handleUrlAction(){
   const params = new URLSearchParams(window.location.search);
+
+  const sheetParam = params.get('sheet');
+  if(sheetParam){
+    try{
+      sheetWebAppUrl = decodeURIComponent(sheetParam);
+      $('sheetUrl').value = sheetWebAppUrl;
+      localStorage.setItem(SHEET_URL_KEY, sheetWebAppUrl); // persist for any manual opens too
+    }catch(e){ /* ignore malformed param */ }
+  }
+
   const action = params.get('action');
   if(action==='in' && !activeSession){
     activeSession = { start: new Date().toISOString() };
