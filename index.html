@@ -251,12 +251,14 @@ async function pushEntryToSheet(entry){
   try{
     await fetch(sheetWebAppUrl, {
       method: 'POST',
-      headers: { 'Content-Type': 'text/plain;charset=utf-8' }, // avoids CORS preflight
+      mode: 'no-cors', // Apps Script responses don't carry CORS headers reliably; no-cors lets the POST land even though we can't read the response back.
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
       body: JSON.stringify(entry)
     });
+    return true;
   }catch(e){
-    // Sync failures are silent in the background — local copy is always safe.
     console.warn('Sheet sync failed', e);
+    return false;
   }
 }
 
@@ -480,7 +482,7 @@ $('testSheetBtn').addEventListener('click', async ()=>{
     date: todayStr(), start: '', end: '', durationMin: 0,
     note: 'Test row from Materials Time Log'
   });
-  sheetStatus('Test row sent — check your sheet. (If nothing shows up, double-check the deployment access is set to "Anyone".)');
+  sheetStatus('Request sent. Go check your Sheet for a new test row — a browser security rule means this app can\'t confirm success on its own, so the Sheet itself is the real check.');
 });
 
 // Settings: sync all existing entries
