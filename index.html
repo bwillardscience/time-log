@@ -300,7 +300,10 @@ function fmtHM(mins){
   return h>0 ? `${h}h ${m}m` : `${m}m`;
 }
 function periodKey(dateStr){
-  const [y,mo,d] = dateStr.split('-').map(Number);
+  let [y,mo,d] = dateStr.split('-').map(Number);
+  // 10-month school year: July/August work has no pay period of its own —
+  // it rolls into the first pay period of the new school year (Sept 1-15).
+  if(mo===7 || mo===8){ mo = 9; d = 1; }
   const half = d<=15 ? 1 : 2;
   return `${y}-${String(mo).padStart(2,'0')}-${half}`;
 }
