@@ -1,0 +1,536 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Materials Time Log</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg: #dfe3e2;
+    --panel: #f2f1ea;
+    --ink: #202524;
+    --ink-soft: #5b625f;
+    --steel: #45545c;
+    --steel-dark: #2c3a41;
+    --amber: #d99a2b;
+    --amber-dark: #a9741a;
+    --line: #b9beb8;
+    --good: #3f7052;
+    --bad: #a3402f;
+    --radius: 2px;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background: var(--bg);
+    background-image:
+      linear-gradient(var(--line) 1px, transparent 1px),
+      linear-gradient(90deg, var(--line) 1px, transparent 1px);
+    background-size: 28px 28px;
+    background-position: -1px -1px;
+    font-family: 'IBM Plex Mono', monospace;
+    color: var(--ink);
+    min-height: 100vh;
+    padding: 20px 12px 60px;
+  }
+  .wrap{ max-width: 760px; margin: 0 auto; }
+
+  header{
+    display:flex; align-items:flex-end; justify-content:space-between;
+    border-bottom: 3px solid var(--steel-dark);
+    padding-bottom: 10px; margin-bottom: 18px; gap: 12px; flex-wrap: wrap;
+  }
+  h1{
+    font-family:'Oswald', sans-serif; text-transform: uppercase;
+    letter-spacing: 1.5px; font-weight: 700; font-size: clamp(22px,5vw,32px);
+    margin: 0; color: var(--steel-dark);
+  }
+  .subtitle{ font-size: 11px; color: var(--ink-soft); letter-spacing: 0.5px; margin-top: 2px;}
+  .badge{
+    font-family:'Oswald',sans-serif; font-size:11px; letter-spacing:1px;
+    text-transform:uppercase; background: var(--steel-dark); color:#fff;
+    padding: 5px 9px; border-radius: var(--radius);
+  }
+
+  .panel{
+    background: var(--panel); border: 1px solid var(--line);
+    border-radius: var(--radius); padding: 18px;
+    box-shadow: 3px 3px 0 rgba(44,58,65,0.08);
+    margin-bottom: 18px;
+  }
+  .panel h2{
+    font-family:'Oswald',sans-serif; font-size: 14px; letter-spacing:1px;
+    text-transform: uppercase; margin: 0 0 14px; color: var(--steel-dark);
+    display:flex; align-items:center; gap:8px;
+  }
+  .panel h2::before{
+    content:""; width:8px; height:8px; background: var(--amber); display:inline-block;
+  }
+
+  /* Clock section */
+  .clock-row{ display:flex; gap:14px; align-items:center; flex-wrap:wrap; }
+  .big-btn{
+    font-family:'Oswald',sans-serif; text-transform:uppercase; letter-spacing:1px;
+    font-weight:600; font-size:16px; border:none; cursor:pointer;
+    padding: 16px 26px; border-radius: var(--radius); color:#fff;
+    transition: transform .08s ease;
+  }
+  .big-btn:active{ transform: scale(0.97); }
+  .btn-in{ background: var(--good); }
+  .btn-out{ background: var(--bad); }
+  .btn-in:hover{ background:#356045; }
+  .btn-out:hover{ background:#8c3527; }
+  .timer{
+    font-family:'IBM Plex Mono',monospace; font-size: 22px; font-weight:600;
+    color: var(--steel-dark); min-width: 110px;
+  }
+  .timer-label{ font-size:11px; color: var(--ink-soft); letter-spacing:1px; text-transform:uppercase;}
+
+  /* manual add */
+  .grid-row{ display:grid; grid-template-columns: 1fr 1fr; gap:10px; margin-bottom:10px; }
+  label{ font-size:10px; letter-spacing:1px; text-transform:uppercase; color:var(--ink-soft); display:block; margin-bottom:4px;}
+  input, textarea{
+    width:100%; font-family:'IBM Plex Mono',monospace; font-size:14px;
+    padding:8px 9px; border:1px solid var(--line); border-radius: var(--radius);
+    background:#fff; color: var(--ink);
+  }
+  textarea{ resize: vertical; min-height: 40px; }
+  .full{ grid-column: 1 / -1; }
+  .small-btn{
+    font-family:'Oswald',sans-serif; text-transform:uppercase; letter-spacing:0.5px;
+    font-size:12px; font-weight:600; border:1px solid var(--steel-dark);
+    background: transparent; color: var(--steel-dark); padding:8px 14px;
+    border-radius: var(--radius); cursor:pointer;
+  }
+  .small-btn:hover{ background: var(--steel-dark); color:#fff; }
+  .small-btn.amber{ border-color: var(--amber-dark); color: var(--amber-dark); }
+  .small-btn.amber:hover{ background: var(--amber-dark); color:#fff; }
+
+  /* pending note prompt */
+  .pending{
+    display:none; margin-top:12px; padding:12px; background:#fff;
+    border:1px dashed var(--amber-dark); border-radius: var(--radius);
+  }
+  .pending.show{ display:block; }
+  .pending p{ margin:0 0 8px; font-size:12px; color: var(--ink-soft); }
+
+  /* period summary */
+  .period-block{ margin-bottom: 16px; }
+  .period-head{
+    display:flex; justify-content:space-between; align-items:baseline;
+    border-bottom:1px solid var(--line); padding-bottom:6px; margin-bottom:8px;
+  }
+  .period-title{ font-family:'Oswald',sans-serif; font-weight:600; font-size:14px; text-transform:uppercase; letter-spacing:0.5px; color: var(--steel-dark);}
+  .period-total{ font-size:15px; font-weight:600; color: var(--amber-dark); }
+
+  /* ticket-style entries */
+  .ticket{
+    position:relative; display:grid; grid-template-columns: 70px 1fr auto auto;
+    gap:10px; align-items:center; background:#fff; border:1px solid var(--line);
+    border-left: 4px solid var(--steel); border-radius: var(--radius);
+    padding:10px 12px; margin-bottom:6px;
+  }
+  .ticket-no{ font-size:11px; color: var(--ink-soft); }
+  .ticket-main .desc{ font-size:13px; color: var(--ink); }
+  .ticket-main .meta{ font-size:11px; color: var(--ink-soft); margin-top:2px;}
+  .ticket-dur{ font-weight:600; font-size:14px; color: var(--steel-dark); white-space:nowrap; }
+  .del-btn{
+    background:none; border:none; color: var(--bad); cursor:pointer; font-size:16px;
+    line-height:1; padding:2px 4px;
+  }
+
+  .empty{ font-size:13px; color: var(--ink-soft); font-style: italic; padding: 6px 0; }
+
+  .footer-actions{ display:flex; gap:10px; flex-wrap:wrap; margin-top:6px; }
+
+  .toast{
+    position:fixed; bottom:18px; left:50%; transform:translateX(-50%);
+    background: var(--steel-dark); color:#fff; padding:10px 16px;
+    border-radius: var(--radius); font-size:12px; letter-spacing:0.5px;
+    opacity:0; pointer-events:none; transition: opacity .2s ease;
+  }
+  .toast.show{ opacity:1; }
+
+  @media (max-width:480px){
+    .grid-row{ grid-template-columns: 1fr; }
+    .ticket{ grid-template-columns: 50px 1fr auto auto; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div>
+      <h1>Materials Time Log</h1>
+      <div class="subtitle">Track hours · pay period totals · one-line job notes</div>
+    </div>
+    <div class="badge" id="periodBadge">—</div>
+  </header>
+
+  <div class="panel">
+    <h2>Clock</h2>
+    <div class="clock-row">
+      <button class="big-btn btn-in" id="clockInBtn">Clock In</button>
+      <button class="big-btn btn-out" id="clockOutBtn" style="display:none;">Clock Out</button>
+      <div>
+        <div class="timer-label" id="timerLabel" style="display:none;">Running</div>
+        <div class="timer" id="timerDisplay"></div>
+      </div>
+    </div>
+    <div class="pending" id="pendingBox">
+      <p>What did you get done? (one sentence)</p>
+      <textarea id="noteInput" placeholder="e.g. Restocked bin 12, logged 40 pallets into inventory"></textarea>
+      <div class="footer-actions" style="margin-top:8px;">
+        <button class="small-btn amber" id="saveNoteBtn">Save Entry</button>
+        <button class="small-btn" id="cancelNoteBtn">Cancel</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="panel">
+    <h2>Add Past Entry</h2>
+    <div class="grid-row">
+      <div><label>Date</label><input type="date" id="manDate"></div>
+      <div><label>Duration (hours)</label><input type="number" id="manHours" step="0.05" placeholder="e.g. 1.5"></div>
+      <div class="full"><label>What did you do</label><textarea id="manNote" placeholder="One sentence description"></textarea></div>
+    </div>
+    <button class="small-btn amber" id="addManualBtn">Add Entry</button>
+  </div>
+
+  <div class="panel">
+    <h2>Google Sheet Sync</h2>
+    <div class="grid-row">
+      <div class="full">
+        <label>Apps Script Web App URL</label>
+        <input type="text" id="sheetUrl" placeholder="https://script.google.com/macros/s/XXXX/exec">
+      </div>
+    </div>
+    <div class="footer-actions">
+      <button class="small-btn" id="saveSheetUrlBtn">Save</button>
+      <button class="small-btn" id="testSheetBtn">Send Test Row</button>
+      <button class="small-btn amber" id="syncAllBtn">Sync All Entries Now</button>
+    </div>
+    <div id="sheetStatus" style="font-size:11px; color:var(--ink-soft); margin-top:8px;"></div>
+  </div>
+
+  <div class="panel">
+    <h2>Log</h2>
+    <div id="periodsContainer"></div>
+    <div class="footer-actions">
+      <button class="small-btn" id="copyBtn">Copy Current Period for Timesheet</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const STORE_KEY = 'materials_time_entries';
+const ACTIVE_KEY = 'materials_active_session';
+const SHEET_URL_KEY = 'materials_sheet_webapp_url';
+let entries = [];
+let activeSession = null;
+let timerInterval = null;
+let sheetWebAppUrl = '';
+
+function sheetStatus(msg){
+  const el = $('sheetStatus');
+  if(el) el.textContent = msg;
+}
+
+async function loadSheetUrl(){
+  try{
+    sheetWebAppUrl = localStorage.getItem(SHEET_URL_KEY) || '';
+    $('sheetUrl').value = sheetWebAppUrl;
+  }catch(e){ sheetWebAppUrl = ''; }
+}
+
+async function pushEntryToSheet(entry){
+  if(!sheetWebAppUrl) return;
+  try{
+    await fetch(sheetWebAppUrl, {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' }, // avoids CORS preflight
+      body: JSON.stringify(entry)
+    });
+  }catch(e){
+    // Sync failures are silent in the background — local copy is always safe.
+    console.warn('Sheet sync failed', e);
+  }
+}
+
+const $ = id => document.getElementById(id);
+
+function toast(msg){
+  const t = $('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'), 2200);
+}
+
+function fmtDate(d){
+  return new Date(d+'T00:00:00').toLocaleDateString(undefined,{month:'short',day:'numeric',year:'numeric'});
+}
+function fmtHM(mins){
+  const h = Math.floor(mins/60), m = Math.round(mins%60);
+  return h>0 ? `${h}h ${m}m` : `${m}m`;
+}
+function periodKey(dateStr){
+  const [y,mo,d] = dateStr.split('-').map(Number);
+  const half = d<=15 ? 1 : 2;
+  return `${y}-${String(mo).padStart(2,'0')}-${half}`;
+}
+function periodLabel(key){
+  const [y,mo,half] = key.split('-');
+  const monthName = new Date(`${y}-${mo}-01T00:00:00`).toLocaleDateString(undefined,{month:'long'});
+  const range = half==='1' ? '1–15' : `16–${new Date(y,Number(mo),0).getDate()}`;
+  return `${monthName} ${y} (${range})`;
+}
+function todayStr(){
+  const d = new Date();
+  return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+}
+
+async function loadData(){
+  try{ entries = JSON.parse(localStorage.getItem(STORE_KEY) || '[]'); }
+  catch(e){ entries = []; }
+  try{ activeSession = JSON.parse(localStorage.getItem(ACTIVE_KEY) || 'null'); }
+  catch(e){ activeSession = null; }
+}
+async function saveEntries(){
+  try{ localStorage.setItem(STORE_KEY, JSON.stringify(entries)); }
+  catch(e){ toast('Save failed — try again'); }
+}
+async function saveActiveSession(){
+  try{
+    if(activeSession){ localStorage.setItem(ACTIVE_KEY, JSON.stringify(activeSession)); }
+    else { localStorage.removeItem(ACTIVE_KEY); }
+  }catch(e){ /* ignore */ }
+}
+
+function renderClockState(){
+  if(activeSession){
+    $('clockInBtn').style.display = 'none';
+    $('clockOutBtn').style.display = 'inline-block';
+    $('timerLabel').style.display = 'block';
+    startTimerDisplay();
+  } else {
+    $('clockInBtn').style.display = 'inline-block';
+    $('clockOutBtn').style.display = 'none';
+    $('timerLabel').style.display = 'none';
+    $('timerDisplay').textContent = '';
+    if(timerInterval) clearInterval(timerInterval);
+  }
+}
+function startTimerDisplay(){
+  if(timerInterval) clearInterval(timerInterval);
+  const update = ()=>{
+    const elapsedMs = Date.now() - new Date(activeSession.start).getTime();
+    const totalMin = Math.floor(elapsedMs/60000);
+    const h = Math.floor(totalMin/60), m = totalMin%60, s = Math.floor((elapsedMs%60000)/1000);
+    $('timerDisplay').textContent = `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
+  };
+  update();
+  timerInterval = setInterval(update, 1000);
+}
+
+function renderLog(){
+  const container = $('periodsContainer');
+  if(entries.length===0){
+    container.innerHTML = '<div class="empty">No entries yet. Clock in above or add a past entry.</div>';
+    $('periodBadge').textContent = 'No period yet';
+    return;
+  }
+  const groups = {};
+  entries.forEach(e=>{
+    const key = periodKey(e.date);
+    (groups[key] = groups[key] || []).push(e);
+  });
+  const sortedKeys = Object.keys(groups).sort().reverse();
+  $('periodBadge').textContent = periodLabel(periodKey(todayStr()));
+
+  container.innerHTML = '';
+  sortedKeys.forEach(key=>{
+    const list = groups[key].slice().sort((a,b)=> b.date.localeCompare(a.date) || b.id - a.id);
+    const totalMin = list.reduce((s,e)=>s+e.durationMin,0);
+    const block = document.createElement('div');
+    block.className = 'period-block';
+    block.innerHTML = `
+      <div class="period-head">
+        <div class="period-title">${periodLabel(key)}</div>
+        <div class="period-total">${fmtHM(totalMin)}</div>
+      </div>
+    `;
+    list.forEach((e,idx)=>{
+      const t = document.createElement('div');
+      t.className = 'ticket';
+      t.innerHTML = `
+        <div class="ticket-no">#${String(e.id).slice(-4)}</div>
+        <div class="ticket-main">
+          <div class="desc">${escapeHtml(e.note || '(no description)')}</div>
+          <div class="meta">${fmtDate(e.date)}${e.start ? ' · '+e.start+'–'+e.end : ''}</div>
+        </div>
+        <div class="ticket-dur">${fmtHM(e.durationMin)}</div>
+        <button class="del-btn" data-id="${e.id}" title="Delete entry">✕</button>
+      `;
+      block.appendChild(t);
+    });
+    container.appendChild(block);
+  });
+
+  container.querySelectorAll('.del-btn').forEach(btn=>{
+    btn.addEventListener('click', async ()=>{
+      const id = Number(btn.dataset.id);
+      entries = entries.filter(e=>e.id!==id);
+      await saveEntries();
+      renderLog();
+      toast('Entry deleted');
+    });
+  });
+}
+
+function escapeHtml(str){
+  const d = document.createElement('div');
+  d.textContent = str;
+  return d.innerHTML;
+}
+
+// Clock In
+$('clockInBtn').addEventListener('click', async ()=>{
+  activeSession = { start: new Date().toISOString() };
+  await saveActiveSession();
+  renderClockState();
+  toast('Clocked in');
+});
+
+// Clock Out -> show note prompt
+$('clockOutBtn').addEventListener('click', ()=>{
+  $('pendingBox').classList.add('show');
+});
+
+$('saveNoteBtn').addEventListener('click', async ()=>{
+  if(!activeSession) return;
+  const end = new Date();
+  const start = new Date(activeSession.start);
+  const durationMin = Math.max(1, Math.round((end-start)/60000));
+  const note = $('noteInput').value.trim();
+  const dateStr = start.getFullYear()+'-'+String(start.getMonth()+1).padStart(2,'0')+'-'+String(start.getDate()).padStart(2,'0');
+  entries.push({
+    id: Date.now(),
+    date: dateStr,
+    start: start.toTimeString().slice(0,5),
+    end: end.toTimeString().slice(0,5),
+    durationMin,
+    note
+  });
+  activeSession = null;
+  $('noteInput').value = '';
+  $('pendingBox').classList.remove('show');
+  await saveEntries();
+  await saveActiveSession();
+  renderClockState();
+  renderLog();
+  toast('Entry saved');
+  pushEntryToSheet(entries[entries.length-1]);
+});
+
+$('cancelNoteBtn').addEventListener('click', ()=>{
+  $('pendingBox').classList.remove('show');
+});
+
+// Manual entry
+$('manDate').value = todayStr();
+$('addManualBtn').addEventListener('click', async ()=>{
+  const date = $('manDate').value || todayStr();
+  const hours = parseFloat($('manHours').value);
+  const note = $('manNote').value.trim();
+  if(!hours || hours<=0){ toast('Enter a valid number of hours'); return; }
+  entries.push({
+    id: Date.now(),
+    date,
+    start: null,
+    end: null,
+    durationMin: Math.round(hours*60),
+    note
+  });
+  $('manHours').value = '';
+  $('manNote').value = '';
+  await saveEntries();
+  renderLog();
+  toast('Entry added');
+  pushEntryToSheet(entries[entries.length-1]);
+});
+
+// Settings: save URL
+$('saveSheetUrlBtn').addEventListener('click', async ()=>{
+  sheetWebAppUrl = $('sheetUrl').value.trim();
+  try{
+    localStorage.setItem(SHEET_URL_KEY, sheetWebAppUrl);
+    sheetStatus(sheetWebAppUrl ? 'Saved. New entries will sync automatically.' : 'Cleared — sync disabled.');
+    toast('Sheet URL saved');
+  }catch(e){ sheetStatus('Could not save URL — try again.'); }
+});
+
+// Settings: test row
+$('testSheetBtn').addEventListener('click', async ()=>{
+  if(!sheetWebAppUrl){ sheetStatus('Enter and save a Web App URL first.'); return; }
+  sheetStatus('Sending test row...');
+  await pushEntryToSheet({
+    date: todayStr(), start: '', end: '', durationMin: 0,
+    note: 'Test row from Materials Time Log'
+  });
+  sheetStatus('Test row sent — check your sheet. (If nothing shows up, double-check the deployment access is set to "Anyone".)');
+});
+
+// Settings: sync all existing entries
+$('syncAllBtn').addEventListener('click', async ()=>{
+  if(!sheetWebAppUrl){ sheetStatus('Enter and save a Web App URL first.'); return; }
+  if(entries.length===0){ sheetStatus('No entries to sync yet.'); return; }
+  sheetStatus(`Syncing ${entries.length} entries...`);
+  for(const e of entries){
+    await pushEntryToSheet(e);
+  }
+  sheetStatus(`Synced ${entries.length} entries to your sheet.`);
+  toast('Sync complete');
+});
+
+// Copy current period summary
+$('copyBtn').addEventListener('click', ()=>{
+  const key = periodKey(todayStr());
+  const list = entries.filter(e=>periodKey(e.date)===key).sort((a,b)=>a.date.localeCompare(b.date));
+  if(list.length===0){ toast('No entries in current period'); return; }
+  const totalMin = list.reduce((s,e)=>s+e.durationMin,0);
+  let out = `${periodLabel(key)} — Total: ${fmtHM(totalMin)}\n\n`;
+  list.forEach(e=>{
+    out += `${fmtDate(e.date)} | ${fmtHM(e.durationMin)} | ${e.note || '(no description)'}\n`;
+  });
+  navigator.clipboard.writeText(out).then(()=>toast('Copied to clipboard')).catch(()=>toast('Copy failed — select text manually'));
+});
+
+// Handle NFC-triggered auto actions via URL: ?action=in or ?action=out
+async function handleUrlAction(){
+  const params = new URLSearchParams(window.location.search);
+  const action = params.get('action');
+  if(action==='in' && !activeSession){
+    activeSession = { start: new Date().toISOString() };
+    await saveActiveSession();
+    toast('Clocked in via tag');
+  } else if(action==='out' && activeSession){
+    // auto clock out with blank note prompt shown for user to fill in
+    $('pendingBox').classList.add('show');
+    toast('Clocked out via tag — add a note below');
+  }
+}
+
+(async function init(){
+  await loadData();
+  await loadSheetUrl();
+  renderClockState();
+  renderLog();
+  await handleUrlAction();
+  renderClockState();
+})();
+</script>
+</body>
+</html>
